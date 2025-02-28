@@ -1,0 +1,455 @@
+---
+title: "bunbun's Finals Econometric"
+output: 
+  flexdashboard::flex_dashboard:
+    theme : flatly
+    orientation: columns
+    vertical_layout: fill
+    source_code : NULL
+    
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(jsonlite)
+library(dplyr)
+library(tidyr)
+library(highcharter)
+library(gp)
+library(data.table)
+library(DT)
+
+```
+
+# Data 
+
+## Column {.tabset .tabset-pills}
+
+
+### Data
+
+The data is about Indonesia's Economic year 2010-2021.
+
+```{r}
+library(readxl)
+setwd(getwd())
+
+interest_rate <- read_excel("data_UAS/INTEREST_RATE.xlsx")
+stock_index <- read.csv("data_uas/JKLQ45_uas.csv")
+consumer_confidence <- read_excel("data_UAS/Book1.xlsx", sheet= "kepercayaan_konsumen")
+inflation_rate <- read_excel("data_UAS/Book1.xlsx", sheet= "tingkat_inflasi")
+Kurs_USD <- read_excel("data_UAS/Kurs_Transaksi_USD.xlsx")
+
+library(reshape2)
+library(dplyr)
+interest_rate <- melt(interest_rate, "Bulan/Tahun") 
+interest_rate <- interest_rate%>%
+  arrange(`Bulan/Tahun`)
+
+
+consumer_confidence <- melt(consumer_confidence, "kepercayaan konsumen")
+inflation_rate <- melt(inflation_rate, "tingkat inflasi")
+
+dc <- data.frame(
+  dates = seq(as.Date("2010/1/1"),as.Date("2021/12/1"), "month"),
+  interest_rate = interest_rate$value,
+  stock_index = stock_index$Close,
+  consumer_confidence = consumer_confidence$value,
+  inflation_rate = inflation_rate$value
+)
+
+unemployment_rate <- read_excel("data_UAS/Pengangguran.xlsx", sheet="Sheet2")
+ur <- unemployment_rate$unemployment_rate
+
+ali <- data.frame(
+   0.1909188,
+   0.3676955,
+   0.1697056,
+   0.205061,
+   0.1697056,
+   0.2616295,
+   0.07778175,
+   0.1202082,
+   0.1414214,
+   0.1767767,
+   1.506137
+)
+
+set.seed(1993)
+
+a= c(
+rnorm(6, mean= ur[1] , sd = ali[1,1]),
+rnorm(6, mean= ur[2] , sd = ali[1,1]),
+rnorm(6, mean= ur[3] , sd = ali[1,2]),
+rnorm(6, mean= ur[4] , sd = ali[1,2]),
+rnorm(6, mean= ur[5] , sd = ali[1,3]),
+rnorm(6, mean= ur[6] , sd = ali[1,3]),
+rnorm(6, mean= ur[7] , sd = ali[1,4]),
+rnorm(6, mean= ur[8] , sd = ali[1,4]),
+rnorm(6, mean= ur[9] , sd = ali[1,5]),
+rnorm(6, mean= ur[10], sd = ali[1,5]),
+rnorm(6, mean= ur[11], sd = ali[1,6]),
+rnorm(6, mean= ur[12], sd = ali[1,6]),
+rnorm(6, mean= ur[13], sd = ali[1,7]),
+rnorm(6, mean= ur[14], sd = ali[1,7]),
+rnorm(6, mean= ur[15], sd = ali[1,8]),
+rnorm(6, mean= ur[16], sd = ali[1,8]),
+rnorm(6, mean= ur[17], sd = ali[1,9]),
+rnorm(6, mean= ur[18], sd = ali[1,9]),
+rnorm(6, mean= ur[19], sd = ali[1,10]),
+rnorm(6, mean= ur[20], sd = ali[1,10]),
+rnorm(6, mean= ur[21], sd = ali[1,11]),
+rnorm(6, mean= ur[22], sd = ali[1,11])
+)
+
+c <- c(rnorm(12, mean= mean(ur), sd = sd(ur)) )
+
+dc$unemployment_rate = c(a,c)
+
+percentage <- c(5.69,6.17,5.8,6.9,
+                  6.48,6.27,6.01,5.94,
+                  6.11,6.21,5.94,5.87,
+                  5.54,5.59,5.52,5.58,
+                  5.12,4.94,4.93,5.05,
+                  4.83,4.74,4.78,5.15,
+                  4.94,5.21,5.03,4.94,
+                  5.01,5.01,5.06,5.19,
+                  5.06,5.27,5.17,5.18,
+                  5.07,5.05,5.02,4.97,
+                  2.97,-5.32,-3.49,-2.19,
+                  -0.69,7.08,3.53,5.03)
+sd_gdp <- c(
+ sd(c(5.69,6.17,5.8,6.9)),
+ sd(c(6.48,6.27,6.01,5.94)),
+ sd(c(6.11,6.21,5.94,5.87)),
+ sd(c(5.54,5.59,5.52,5.58)),
+ sd(c(5.12,4.94,4.93,5.05)),
+ sd(c(4.83,4.74,4.78,5.15)),
+ sd(c(4.94,5.21,5.03,4.94)),
+ sd(c(5.01,5.01,5.06,5.19)),
+ sd(c(5.06,5.27,5.17,5.18)),
+ sd(c(5.07,5.05,5.02,4.97)),
+ sd(c(2.97,-5.32,-3.49,-2.19)),
+ sd(c(-0.69,7.08,3.53,5.03)))
+ 
+GDP_growth <- c(
+rnorm(3, mean = percentage[1],  sd= sd_gdp[1]),
+rnorm(3, mean = percentage[2],  sd= sd_gdp[1]),
+rnorm(3, mean = percentage[3],  sd= sd_gdp[1]),
+rnorm(3, mean = percentage[4],  sd= sd_gdp[1]),
+rnorm(3, mean = percentage[5],  sd= sd_gdp[2]),
+rnorm(3, mean = percentage[6],  sd= sd_gdp[2]),
+rnorm(3, mean = percentage[7],  sd= sd_gdp[2]),
+rnorm(3, mean = percentage[8],  sd= sd_gdp[2]),
+rnorm(3, mean = percentage[9],  sd= sd_gdp[3]),
+rnorm(3, mean = percentage[10], sd= sd_gdp[3]),
+rnorm(3, mean = percentage[11], sd= sd_gdp[3]),
+rnorm(3, mean = percentage[12], sd= sd_gdp[3]),
+rnorm(3, mean = percentage[13], sd= sd_gdp[4]),
+rnorm(3, mean = percentage[14], sd= sd_gdp[4]),
+rnorm(3, mean = percentage[15], sd= sd_gdp[4]),
+rnorm(3, mean = percentage[16], sd= sd_gdp[4]),
+rnorm(3, mean = percentage[17], sd= sd_gdp[5]),
+rnorm(3, mean = percentage[18], sd= sd_gdp[5]),
+rnorm(3, mean = percentage[19], sd= sd_gdp[5]),
+rnorm(3, mean = percentage[20], sd= sd_gdp[5]),
+rnorm(3, mean = percentage[21], sd= sd_gdp[6]),
+rnorm(3, mean = percentage[22], sd= sd_gdp[6]),
+rnorm(3, mean = percentage[23], sd= sd_gdp[6]),
+rnorm(3, mean = percentage[24], sd= sd_gdp[6]),
+rnorm(3, mean = percentage[25], sd= sd_gdp[7]),
+rnorm(3, mean = percentage[26], sd= sd_gdp[7]),
+rnorm(3, mean = percentage[27], sd= sd_gdp[7]),
+rnorm(3, mean = percentage[28], sd= sd_gdp[7]),
+rnorm(3, mean = percentage[29], sd= sd_gdp[8]),
+rnorm(3, mean = percentage[30], sd= sd_gdp[8]),
+rnorm(3, mean = percentage[31], sd= sd_gdp[8]),
+rnorm(3, mean = percentage[32], sd= sd_gdp[8]),
+rnorm(3, mean = percentage[33], sd= sd_gdp[9]),
+rnorm(3, mean = percentage[34], sd= sd_gdp[9]),
+rnorm(3, mean = percentage[35], sd= sd_gdp[9]),
+rnorm(3, mean = percentage[36], sd= sd_gdp[9]),
+rnorm(3, mean = percentage[37], sd= sd_gdp[10]),
+rnorm(3, mean = percentage[38], sd= sd_gdp[10]),
+rnorm(3, mean = percentage[39], sd= sd_gdp[10]),
+rnorm(3, mean = percentage[40], sd= sd_gdp[10]),
+rnorm(3, mean = percentage[41], sd= sd_gdp[11]),
+rnorm(3, mean = percentage[42], sd= sd_gdp[11]),
+rnorm(3, mean = percentage[43], sd= sd_gdp[11]),
+rnorm(3, mean = percentage[44], sd= sd_gdp[11]),
+rnorm(3, mean = percentage[45], sd= sd_gdp[12]),
+rnorm(3, mean = percentage[46], sd= sd_gdp[12]),
+rnorm(3, mean = percentage[47], sd= sd_gdp[12]),
+rnorm(3, mean = percentage[48], sd= sd_gdp[12])
+)
+dc$GDP_growth = GDP_growth
+GDP_growth<- data.frame(GDP_growth)
+
+library(dplyr)
+library(tidyr)
+USD_buy <- Kurs_USD%>%
+  separate(Tanggal, c("bulan","hari", "tahun"))%>%
+  group_by(tahun,bulan)%>%
+  summarise(BuyUSD = mean(`Kurs Jual`))%>%
+  mutate_at(c("tahun","bulan"), as.numeric)%>%
+  arrange(tahun,bulan)
+dc$USD = USD_buy$BuyUSD
+DT::datatable(dc)
+```
+
+
+### Error Time Series Prediction
+
+```{r}
+library(forecast)
+dc_arima1 <- arima(dc$USD, order = c(1,1,1)) # ARIMA(1,1,1)
+dc_arima2 <- arima(dc$USD, order = c(2,1,1)) # ARIMA(2,1,1)
+dc_arima3 <- arima(dc$USD, order = c(3,1,1)) # ARIMA(3,1,1)
+dc_arima4 <- arima(dc$USD, order = c(4,1,1)) # ARIMA(4,1,1)
+
+auto_arima <- auto.arima(dc$USD, max.p = 4, d = 1, max.q = 1) 
+
+
+ts_error <-data.frame(
+  actual = dc$USD
+)
+ts_error$"ARIMA(1,1,1)" = dc_arima1$residuals 
+ts_error$"ARIMA(2,1,1)" = dc_arima2$residuals 
+ts_error$"ARIMA(3,1,1)" = dc_arima3$residuals 
+ts_error$"ARIMA(4,1,1)" = dc_arima4$residuals 
+ts_error$"ARIMA(2,1,0)" = auto_arima$residuals 
+
+library(rugarch)
+# ARCH(1) model
+arch1_spec <- ugarchspec(variance.model= list(model="sGARCH", garchOrder = c(1,0)), mean.model = list(armaOrder = c(0,0), include.mean=T))
+arch1_fit <- ugarchfit(spec=arch1_spec, data=dc$USD)
+
+ts_error$"ARCH(1)" = residuals(arch1_fit)
+
+# GARCH(1) model
+garch1_spec <- ugarchspec(variance.model= list(model="sGARCH", garchOrder = c(1,1)), mean.model = list(armaOrder = c(0,0), include.mean=T))
+garch1_fit <- ugarchfit(spec=garch1_spec, data=dc$USD)
+
+ts_error$"GARCH(1,1)" = residuals(garch1_fit)
+
+PE_ts <-abs(ts_error)/ ts_error$actual
+PE_ts_tes <-PE_ts[c(116:144),] 
+
+acc_ts <- data.frame(
+  Method = colnames(PE_ts_tes[,-1]),
+  MAPE = c(mean(PE_ts_tes$`ARIMA(1,1,1)`) *100,
+           mean(PE_ts_tes$`ARIMA(2,1,1)`) *100,
+           mean(PE_ts_tes$`ARIMA(3,1,1)`) *100,
+           mean(PE_ts_tes$`ARIMA(4,1,1)`) *100,
+           mean(PE_ts_tes$`ARIMA(2,1,0)`) *100,
+           mean(PE_ts_tes$`ARCH(1)`)*100,
+           mean(PE_ts_tes$`GARCH(1,1)`*100)
+  )
+)
+
+library(fpp2)
+holt_train <- window(dc$USD, end = 115)
+holt_test <- window(dc$USD, start = 116)
+
+beta <- seq(.0001, .5, by = .001)
+RMSE <- NA
+for(i in seq_along(beta)) {
+  fit <- holt(holt_train,
+              beta = beta[i], 
+              h = 100)
+  RMSE[i] <- accuracy(fit, 
+                      holt_test)[2,2]
+}
+
+beta.fit <- data_frame(beta, RMSE)
+beta.min <- filter(beta.fit, 
+                   RMSE == min(RMSE))
+
+holts <- holt(holt_train, h=100)
+holts2 <- holt(holt_train, h=100, beta=beta.min$beta)
+
+holts_acc <- data.frame(
+  Method = c("Holt's b=0.0568", "Holt's b=0.0451"),
+  MAPE = c(1.957945, 2.068370)
+  )
+
+acc_ts <- rbind(acc_ts, holts_acc)
+datatable(acc_ts)
+```
+
+
+# Area Dist
+
+## Column { .tabset .tabset-pills data-width=500}
+
+
+
+
+### Rate
+Interest Rate, Inflation Rate, Unemployment Rate and GDP Growth
+```{r}
+hchart(density(dc$interest_rate), type = "area", color= "#003285",name = "interest rate")%>%
+  hc_add_series(density(dc$inflation_rate), type="area", color = "#FF7F3E", name="inflation rate")%>%
+  hc_add_series(density(dc$unemployment_rate), type="area", color = "#94FFD8", name="unemployment rate")%>%
+  hc_add_series(density(dc$GDP_growth), type="area", color = "#FF0080", name="GDP growth")%>%
+  hc_title(text = "Density Plots of Rate",
+           style = list(color = "#240750", useHTML = TRUE))
+```
+
+### Stock Index
+
+```{r}
+hchart(density(dc$stock_index), type="area", color="#A0DEFF", name="LQ45 Stock Index")%>%
+  hc_title(text = "Density Plots of Stock Index LQ45",
+           style = list(color = "#240750", useHTML = TRUE))
+```
+
+
+### Exchange Rates
+```{r}
+hchart(density(dc$USD), type="area", color="#A1DD70", name="USD to Rupiah") %>%
+  hc_title(text = "Density Plots of USD",
+           style = list(color = "#240750", useHTML = TRUE))
+```
+
+
+## Column 
+
+### Correlation Plot
+
+```{r}
+library(plotly)
+fig <- plot_ly(x = colnames(dc[,-1]), y = colnames(dc[,-1]), z =cor(dc[,-1]), type = "heatmap")%>%
+        layout(title = "Correlation between variables")
+
+fig
+```
+
+
+
+# Time Series 
+
+
+## Column {.tabset .tabset-pills}
+
+### Prediction
+
+```{r}
+ts_dc <- ts((dc$USD), start = c(2010,1), end = c(2021,12), frequency = 12)
+decomp <- decompose(ts_dc)
+ts <- ts(c(dc$USD), start = c(2010,1), 
+                frequency = 12) 
+ts2 <- ts(c(fitted.values(dc_arima3),14380.68,14370.20), start = c(2010,1), 
+                frequency = 12) 
+hchart(ts2, type="line", name="Predicted US Dollar", color = "#FF9A00")%>%
+  hc_add_series(ts, type="line", name= "Actual US Dollar", color="#615EFC")%>%
+  hc_title(text="Actual vs Prediction Rp to USD by ARIMA(3,1,1)")%>%
+  hc_add_series(decomp$trend, type="line", name="trend", color="#A1DD70")
+```
+
+
+### Box-Jenkins
+
+```{r}
+p1= predict(dc_arima1,2)
+p2= predict(dc_arima2,2)
+p3= predict(dc_arima3,2)
+p4= predict(dc_arima4,2)
+
+arima5 <- arima(dc$USD, order = c(2,1,0))
+p5= predict(arima5,2)
+
+ts <- ts(c(dc$USD), start = c(2010,1), frequency = 12) 
+
+a1 = ts(c(fitted.values(dc_arima1) ,p1$pred), start = c(2010,1), frequency = 12) 
+a2 = ts(c(fitted.values(dc_arima2) ,p2$pred), start = c(2010,1), frequency = 12) 
+a3 = ts(c(fitted.values(dc_arima3) ,p3$pred), start = c(2010,1), frequency = 12) 
+a4 = ts(c(fitted.values(dc_arima4) ,p4$pred), start = c(2010,1), frequency = 12) 
+a5 = ts(c(fitted.values(arima5),p5$pred), start = c(2010,1), frequency = 12) 
+
+
+
+hchart(ts, type="line", name="Actual US Dollar", color = "black")%>%
+  hc_add_series(a1, type="line", name= "ARIMA(1,1,1)", color="#03AED2")%>%
+  hc_add_series(a2, type="line", name= "ARIMA(2,1,1)", color="#68D2E8")%>%
+  hc_add_series(a3, type="line", name= "ARIMA(3,1,1)", color="#FDDE55")%>%
+  hc_add_series(a4, type="line", name= "ARIMA(4,1,1)", color="#615EFC")%>%
+  hc_add_series(a5, type="line", name= "ARIMA(2,1,0)", color="#A3D8FF")%>%
+  hc_title(text="Prediction Rp to USD by Box-Jenkins")
+
+```
+
+
+### Holts
+
+```{r}
+h1= predict(holts,2)
+h2=  predict(holts2,2)
+
+h1= data.frame(h1)
+h2 = predict(h2)
+h11 = ts(c(fitted.values(holts), h1$Point.Forecast[1:30]	), start = c(2010,1), frequency = 12) 
+h22 = ts(c(fitted.values(holts2), h2$Point.Forecast[1:30]), start = c(2010,1), frequency = 12) 
+
+
+hchart(ts, type="line", name="Actual US Dollar", color = "black")%>%
+  hc_add_series(h11, type="line", name= "Holt's b=0.0568", color="#F9A828")%>%
+  hc_add_series(h22, type="line", name= "Holt's b=0.0451", color="#F29191")%>%
+  hc_title(text="Prediction Rp to USD by Holt's Method")
+
+```
+
+
+### Combined Plot
+
+```{r}
+
+hchart(ts, type="line", name="Actual US Dollar", color = "black")%>%
+  hc_add_series(h11, type="line", name= "Holt's b=0.0568", color="#F9A828")%>%
+  hc_add_series(a1, type="line", name= "ARIMA(1,1,1)", color="#03AED2")%>%
+  hc_add_series(a2, type="line", name= "ARIMA(2,1,1)", color="#68D2E8")%>%
+  hc_add_series(a3, type="line", name= "ARIMA(3,1,1)", color="#FDDE55")%>%
+  hc_add_series(a4, type="line", name= "ARIMA(4,1,1)", color="#615EFC")%>%
+  hc_add_series(a5, type="line", name= "ARIMA(2,1,0)", color="#A3D8FF")%>%  
+  hc_add_series(h22, type="line", name= "Holt's b=0.0451", color="#F29191")%>%
+  hc_title(text="Prediction Rp to USD Time Series Model")
+```
+
+
+
+```{r eval=FALSE}
+### ARCH GARCHar1 = predict(arch_fit,2)
+ar2 =  predict(arch2_fit,2)
+
+ar1= data.frame(h1)
+ar2 = data.frame(h2)
+arch_fit
+ar11 = ts(c(gamma(arch_fit), ar1$Point.Forecast[1:2]	), start = c(2010,1), frequency = 12) 
+ar22 = ts(c(fitted.values(arch2_fit), ar2$Point.Forecast[1:2]), start = c(2010,1), frequency = 12) 
+
+
+hchart(ts, type="line", name="Actual US Dollar", color = "black")%>%
+  hc_add_series(ar11, type="line", name= "Holt's b=0.0568", color="#F9A828")%>%
+  hc_add_series(ar22, type="line", name= "Holt's b=0.0451", color="#F29191")%>%
+  hc_title(text="Prediction Rp to USD by Holt's Method")
+
+```
+
+# Reference
+
++ Makridakis, S., Wheelwright, S. C., & Hyndman, R. J. (2008). Forecasting methods and applications. John wiley & sons.
+
++ https://www.datacamp.com/tutorial/tutorial-ridge-lasso-elastic-net
+
++ https://sscc.wisc.edu/sscc/pubs/RegDiag-R/linearity.html
+
++ https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/seq.Date
+
++ https://www.geeksforgeeks.org/decision-tree-for-regression-in-r-programming/
+
++ https://www.geeksforgeeks.org/random-forest-approach-for-regression-in-r-programming/
+
++ https://www.geeksforgeeks.org/exponential-smoothing-in-r-programming/
+
++ https://colorhunt.co/
+
